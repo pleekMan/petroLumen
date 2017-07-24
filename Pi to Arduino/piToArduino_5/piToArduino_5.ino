@@ -63,6 +63,8 @@ void loop(){
         }
 
         Serial.println(" || RESETTING LIGHT COUNTERS");
+        Serial.println(" || REMEMBER: THIS PROGRAM ACCEPTS COLOR VALUES 0 -> 100 THAT ARE REMAPPED To 0 -> 255");
+
       }
       ///
       if(byte(colorValue) == 102){
@@ -106,7 +108,9 @@ void loop(){
 
 
 void assignToRgbChannel(int channel, char colorValue){
-
+  
+  colorValue = map(colorValue,0,100,0,255); // SERIAL INPUT RANGE IS 0 -> 100
+  
   switch(channel){
   case 0:
     lights[lightCounter].red = colorValue;
