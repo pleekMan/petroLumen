@@ -35,7 +35,7 @@ def load_data(archivo):
 	global canvasWidth
 	global canvasHeight
 	
-	with open('ppiedras.csv','r') as f:
+	with open("ppiedras.csv",'r') as f:
 		reader = csv.reader(f)
 		for line in reader:
 			if(line[0] == 'size'): # bounding Box de la instalacion real, en cm

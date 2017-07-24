@@ -9,15 +9,15 @@ SI EL PUERTO SERIE dev/ttyACM0 desaparece:
  ---- SI NO FUNCA, CAMBIAR LA ENTRADA USB DE LA RASPI A OTRA 
  ---- SI NADA FUNCIONA, REBOOTEAR LA RASPI
  */
- 
- // OK, EL PROBLEMA ERA ESTABA USANDO ARDUINO LEONARDO, Q ES UNA MIERDA Y
- // CAUSABA ALGUN TIPO DE DESCONFIGURACION DE LOS PUERTOS EN LA RASPI
+
+// OK, EL PROBLEMA ESTABA USANDO ARDUINO LEONARDO, Q ES UNA MIERDA Y
+// CAUSABA ALGUN TIPO DE DESCONFIGURACION DE LOS PUERTOS EN LA RASPI
 
 #include <PololuLedStrip.h>
 
 PololuLedStrip<12> ledStrip;
 
-#define LED_COUNT 10
+#define LED_COUNT 2
 rgb_color lights[LED_COUNT];
 
 int lightCounter = 0;
@@ -33,7 +33,7 @@ void loop(){
 
 
   if(Serial.available()){
-    Serial.println("New Data");
+    Serial.print("New Data = ");
     /*
     char data[3];
      Serial.readBytes(data,3);
@@ -42,32 +42,60 @@ void loop(){
      Serial.println(data[i]);
      }
      */
+    char colorValue =  Serial.read();
+    Serial.println(byte(colorValue));
 
-    assignToRgbChannel(rgbCounter);
-    rgbCounter++;
+    // VALUE CODE = ANY VALUE ABOVE 100 IS CONSIDERED A MESSAGE AND
+    // NOT A COLOR. THEREFORE, THE COLOR INPUT RANGE IS 0 -> 100
+    // CODES:
+    // 101 -> RESET LIGHT & RGB COUNTERS
+    // 102 -> TEST LIGHTS
+    if(byte(colorValue) > 100){
 
-    Serial.print("R ");
-    Serial.println(lights[lightCounter].red);
-    Serial.print("G ");
-    Serial.println(lights[lightCounter].green);      
-    Serial.print("B ");
-    Serial.println(lights[lightCounter].blue);
-    Serial.println("------");
-    Serial.print("rgbCounter -> ");
-    Serial.println(rgbCounter);
-    Serial.print("lightCounter -> ");
-    Serial.println(lightCounter);
+      if(byte(colorValue) == 101){
+        lightCounter = 0;
+        rgbCounter = 0;
 
-    if(rgbCounter >= 3 ){
-      rgbCounter = 0;
-      lightCounter++;
-    } 
+        for( int i = 0; i < LED_COUNT;  ++i ){
+          lights[i].red = 0;
+          lights[i].green = 0;
+          lights[i].blue = 0;
+        }
 
-    if(lightCounter >= LED_COUNT){
-      delay(2);
-      ledStrip.write(lights, LED_COUNT);
+        Serial.println(" || RESETTING LIGHT COUNTERS");
+      }
+      ///
+      if(byte(colorValue) == 102){
+        Serial.println(" || TESTING LIGHTS");
+      }
+    }
+    else{
+      assignToRgbChannel(rgbCounter, colorValue);
 
-      lightCounter = 0; 
+      Serial.print("R: ");
+      Serial.print(lights[lightCounter].red);
+      Serial.print("\tG: ");
+      Serial.print(lights[lightCounter].green);      
+      Serial.print("\tB: ");
+      Serial.println(lights[lightCounter].blue);
+      Serial.println("--");
+      Serial.print("LIGHT # ->\t");
+      Serial.println(lightCounter);
+      Serial.print("CHANNEL ->\t");
+      Serial.println(rgbCounter);
+      Serial.println("------");
+
+
+      if(rgbCounter >= 3 ){
+        rgbCounter = 0;
+        lightCounter++;
+      } 
+
+      if(lightCounter >= LED_COUNT){
+        //ledStrip.write(lights, LED_COUNT);
+        delay(2);
+        lightCounter = 0; 
+      }
     }
 
     Serial.println("######################");
@@ -77,8 +105,7 @@ void loop(){
 }
 
 
-void assignToRgbChannel(int channel){
-  char colorValue =  Serial.read();
+void assignToRgbChannel(int channel, char colorValue){
 
   switch(channel){
   case 0:
@@ -91,7 +118,16 @@ void assignToRgbChannel(int channel){
     lights[lightCounter].blue = colorValue;
     break;
   }
+
+  rgbCounter++;
+
 }
+
+
+
+
+
+
 
 
 
