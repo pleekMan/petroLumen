@@ -5,6 +5,7 @@ import random
 import math
 import csv
 from ColorSender import *
+from time import sleep
 
 # OJO, ESTAS UTILIZANDO noise2D, LO QUE SIGNIFICA QUE ESTAS "DRAGGEANDO" EL CANVAS DE NOISE
 # EN UNA DIRECCION DEFINIDA AL PRINCIPIO AL SETEAR timeXInc
@@ -22,6 +23,7 @@ nodesY = []
 nodesValue = []
 canvasWidth = 1000
 canvasHeight = 500
+textos = []
 
 timeX = random.random()
 timeY = random.random()
@@ -43,9 +45,11 @@ def load_data(archivo):
 	global canvasHeight
 	
 	global ledCount
+	global textos
 	
-	with open("ppiedras.csv",'r') as f:
+	with open("ppiedras_15.csv",'r') as f:
 		reader = csv.reader(f)
+		
 		for line in reader:
 			if(line[0] == 'size'): # bounding Box de la instalacion real, en cm
 				artworkWidth = int(line[1])
@@ -53,12 +57,17 @@ def load_data(archivo):
 				print "ArtWork Size: ", artworkWidth, artworkHeight
 				print "Canvas Size: ", canvasWidth, canvasHeight
 				continue
+				
 			rockX = (float(line[0]) / artworkWidth) * canvasWidth
 			rockY = (float(line[1]) / artworkHeight) * canvasHeight
 			nodesX.append(rockX)
 			nodesY.append(rockY)
 			nodesValue.append(255);
+			
+			textos.append(pyglet.text.Label(str(ledCount),x=int(rockX), y=int(rockY),font_name="Arial", font_size=12))
+			
 			ledCount += 1
+			
 		f.close()
 
 
@@ -85,20 +94,27 @@ def on_draw():
     global timeFarLimit
     global canvasWidth
     global canvasHeight
+    
+    global colorSender
 
     for i in range(len(nodesX)):
         localTimeX = mapToRange(nodesX[i],0,canvasWidth,timeX, timeX + timeFarLimit)
         localTimeY = mapToRange(nodesY[i],0,canvasHeight,timeY, timeY + timeFarLimit)
 
-        scale = snoise2(localTimeX,localTimeY,octaves=1) # pnoise1(time,octaves)  range: -1 -> 1
-        scale = (scale + 1) * 0.5 # range: 0 -> 1
+        noiseValue = snoise2(localTimeX,localTimeY,octaves=1) # pnoise1(time,octaves)  range: -1 -> 1
+        noiseValue = (noiseValue + 1) * 0.5 # range: 0 -> 1
         #print scale
-        scale *= 100 # MAX CIRCLE SIZE
-        nodesValue[i] = scale
+        vizScale = noiseValue * 50 # MAX CIRCLE SIZE
+        nodesValue[i] = noiseValue * 100 # MAX COLOR VALUE TO SEND TO ARDUINO SYSTEM
 
         # DRAW CIRCLE
-        drawCircle(nodesX[i],nodesY[i],scale,50)
-
+        drawCircle(nodesX[i],nodesY[i],vizScale,50)
+        textos[i].text = str(i) + " : " + str("%.2f" % noiseValue)
+        textos[i].draw();
+	
+	
+	#colorSender.sendOut()
+	
     '''
     # DRAW LITTLE SQUARE
     glColor4f(1,0,0,1.0)
@@ -119,16 +135,26 @@ def on_draw():
 def on_mouse_press(x,y,button,modifiers):
 	global colorSender
 	print "MousePressing"
-	for i in range(len(nodesValue)):
-		colorSender.setColor(i,nodesValue[i],nodesValue[i],nodesValue[i])
 	
+	for i in range(len(nodesValue)):
+		colorSender.setColor(i,0,0,nodesValue[i])
+	
+	#colorSender.resetLights()
 	colorSender.sendOut()
+
+@window.event
+def on_key_press(symbol, modifiers):
+	global colorSender
+	print symbol
+	if symbol == ord("r") or ord("R"):
+		colorSender.resetLights()
 
 	
 def drawCircle(x,y,radius, res=10):
     #res = 10
     glColor4f(1,1,1,1);
-    glBegin(GL_POLYGON)
+    #glBegin(GL_POLYGON)
+    glBegin(GL_LINES)
     for i in range(res):
         angle = ((math.pi * 2) / res) * i
         vX = x + (radius * math.cos(angle))
@@ -153,23 +179,23 @@ def on_show():
     global colorSender
     
     window.clear()
-    glClear(0)
-    pyglet.gl.glClearColor(0,0,0, 1)
+    #glClear(0)
+    #pyglet.gl.glClearColor(0,0,0, 1)
     
     load_data('ppiedras.csv')
     colorSender = ColorSender(ledCount);
     
     window.set_size(canvasWidth,canvasHeight)
     
-    print "APP START"
+    print " || APP START"
 
 
 @window.event
 def on_activate():
     pyglet.gl.glClearColor(0,0,0, 1)
-    print "WINDOW ACTIVATED"
+    print " || WINDOW ACTIVATED"
 
-pyglet.clock.schedule_interval(update, 1.0/30.0) # assign refresh rate to function-> schedule_interval(functionToSchedule, FPS)
+pyglet.clock.schedule_interval(update, 1.0/10.0) # assign refresh rate to function-> schedule_interval(functionToSchedule, FPS)
 pyglet.app.run()
 
 

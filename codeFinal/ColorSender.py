@@ -1,3 +1,7 @@
+import serial
+import struct
+from time import sleep
+
 class ColorSender:
 	
 	#ledCount = 2
@@ -9,25 +13,29 @@ class ColorSender:
 		self.ledCount = _ledCount
 		print "LEDS: ", self.ledCount
 		
+		self.serialComm = None
+		
 		for i in range(self.ledCount * 3):
 			self.colors.append(255)
 		
 		try:
-			serialComm = serial.Serial('/dev/ttyACM0',115200)
-			print " || INITIALIZING ARDUINO SERIAL COMM -> port: /dev/ttyACM0 | 115200 bps", 
+			print " || INITIALIZING ARDUINO SERIAL COMM -> port: /dev/ttyACM0 | 115200 bps" 
+			self.serialComm = serial.Serial('/dev/ttyACM0',115200)
 		except:
 			print " || NO ARDUINO DETECTED, PUNK..!!"
 			
-		self.sendOut()
+		sleep(2)
+		self.resetLights()
 	
 	
 	def resetLights(self):
 		print " || RESETTING LIGHTS"
-		serialComm.write(struct.pack('>B',int(codes["reset"])))
+		self.serialComm.write(struct.pack('>B',int(101)))
+		sleep(2)
 	
 	def testLights(self):
 		print " || TESTING LIGHTS"
-		serialComm.write(struct.pack('>B',int(codes["test"])))
+		serialComm.write(struct.pack('>B',int(102)))
 		
 	def setColor(self, led=0, r=0,g=0,b=0):
 		if led < self.ledCount:
@@ -39,8 +47,8 @@ class ColorSender:
 		#intValue = [int(splittedInput[0]),int(splittedInput[1]),int(splittedInput[2])]
 		#print intValue
 		print " || SENDING OUT.."
+		
 		for i in range(self.ledCount):
-			print " || LED",str(i)+":", int(self.colors[(3*i)+0]), int(self.colors[(3*i)+1]), int(self.colors[(3*i)+2])
-			#serialComm.write(struct.pack('>BBB',colors[0],colors[1],colors[2]))
-			##serialComm.write(struct.pack('>BBB',int(colors[(3*i)+0]),int(colors[(3*i)+1]),int(colors[(3*i)+2])))
-
+			#print " || LED",str(i)+":", int(self.colors[(3*i)+0]), int(self.colors[(3*i)+1]), int(self.colors[(3*i)+2])
+			self.serialComm.write(struct.pack('>BBB',int(self.colors[(3*i)+0]),int(self.colors[(3*i)+1]),int(self.colors[(3*i)+2])))
+			self.serialComm.flush()
