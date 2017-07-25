@@ -4,6 +4,7 @@ from noise import pnoise1, snoise2
 import random
 import math
 import csv
+from ColorSender import *
 
 # OJO, ESTAS UTILIZANDO noise2D, LO QUE SIGNIFICA QUE ESTAS "DRAGGEANDO" EL CANVAS DE NOISE
 # EN UNA DIRECCION DEFINIDA AL PRINCIPIO AL SETEAR timeXInc
@@ -15,8 +16,10 @@ window = pyglet.window.Window(visible=True, resizable=False, vsync=True)
 
 
 #window.set_visible()
+ledCount = 0
 nodesX = []
 nodesY = []
+nodesValue = []
 canvasWidth = 1000
 canvasHeight = 500
 
@@ -28,12 +31,18 @@ timeYInc = (random.random() * 0.06) - 0.03
 # NOISE VALUES FOR INTERMEDIATE NODES WILL BE INTERPOLATED FROM (time -> time + timeFarLimit)
 timeFarLimit = 1
 
+# Serial Sender
+colorSender = None
+
 def load_data(archivo):
 	global nodesX
 	global nodesY
+	global nodesValue
 	
 	global canvasWidth
 	global canvasHeight
+	
+	global ledCount
 	
 	with open("ppiedras.csv",'r') as f:
 		reader = csv.reader(f)
@@ -48,6 +57,8 @@ def load_data(archivo):
 			rockY = (float(line[1]) / artworkHeight) * canvasHeight
 			nodesX.append(rockX)
 			nodesY.append(rockY)
+			nodesValue.append(255);
+			ledCount += 1
 		f.close()
 
 
@@ -69,6 +80,8 @@ def on_draw():
 
     global nodesX
     global nodesY
+    global nodesValue
+    
     global timeFarLimit
     global canvasWidth
     global canvasHeight
@@ -80,7 +93,8 @@ def on_draw():
         scale = snoise2(localTimeX,localTimeY,octaves=1) # pnoise1(time,octaves)  range: -1 -> 1
         scale = (scale + 1) * 0.5 # range: 0 -> 1
         #print scale
-        scale *= 10 # MAX CIRCLE SIZE
+        scale *= 100 # MAX CIRCLE SIZE
+        nodesValue[i] = scale
 
         # DRAW CIRCLE
         drawCircle(nodesX[i],nodesY[i],scale,50)
@@ -101,7 +115,16 @@ def on_draw():
     #glColor4f(1,1,1,1.0)
     #pyglet.text.Label(str(scale),x=100,y=100)
 
+@window.event
+def on_mouse_press(x,y,button,modifiers):
+	global colorSender
+	print "MousePressing"
+	for i in range(len(nodesValue)):
+		colorSender.setColor(i,nodesValue[i],nodesValue[i],nodesValue[i])
+	
+	colorSender.sendOut()
 
+	
 def drawCircle(x,y,radius, res=10):
     #res = 10
     glColor4f(1,1,1,1);
@@ -126,11 +149,16 @@ def mapToRange(value, sourceMin, sourceMax, targetMin, targetMax):
 
 @window.event
 def on_show():
+    
+    global colorSender
+    
     window.clear()
     glClear(0)
     pyglet.gl.glClearColor(0,0,0, 1)
     
     load_data('ppiedras.csv')
+    colorSender = ColorSender(ledCount);
+    
     window.set_size(canvasWidth,canvasHeight)
     
     print "APP START"
