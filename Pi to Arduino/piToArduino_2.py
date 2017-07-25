@@ -2,8 +2,11 @@ import serial
 import struct
 
 ledCount = 2
-serialComm = serial.Serial('/dev/ttyACM0',115200)
-
+try:
+	serialComm = serial.Serial('/dev/ttyACM0',115200)
+except:
+	print "NO ARDUINO DETECTED, PUNK"
+	
 ##################
 
 def resetLights():
@@ -25,7 +28,7 @@ while True:
 	splittedInput = colorInput.split(",")
 	print splittedInput
 
-	if len(splittedInput) <= 1:
+	if len(splittedInput) < 3:
 		# INPUT IS A CODE
 		try:
 			codeFunctions[splittedInput[0]]()
