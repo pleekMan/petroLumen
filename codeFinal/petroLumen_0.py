@@ -17,6 +17,9 @@ window = pyglet.window.Window(visible=True, resizable=False, vsync=True)
 
 
 #window.set_visible()
+
+noArduino = True;
+
 ledCount = 0
 nodesX = []
 nodesY = []
@@ -103,7 +106,9 @@ def on_draw():
 
         noiseValue = snoise2(localTimeX,localTimeY,octaves=1) # pnoise1(time,octaves)  range: -1 -> 1
         noiseValue = (noiseValue + 1) * 0.5 # range: 0 -> 1
-        #print scale
+        
+        noiseValue = contrastSigmoid(noiseValue, 0.05) #OBSERVABLE VALUES: 0 -> 0.3
+        
         vizScale = noiseValue * 50 # MAX CIRCLE SIZE
         nodesValue[i] = noiseValue * 100 # MAX COLOR VALUE TO SEND TO ARDUINO SYSTEM
 
@@ -113,7 +118,12 @@ def on_draw():
         textos[i].draw();
 	
 	
-	#colorSender.sendOut()
+	# SEND colors into ColorSender and out to Arduino
+	if not noArduino:
+		for i in range(len(nodesValue)):
+			colorSender.setColor(i,0,0,nodesValue[i])
+		colorSender.sendOut()
+	
 	
     '''
     # DRAW LITTLE SQUARE
@@ -136,18 +146,20 @@ def on_mouse_press(x,y,button,modifiers):
 	global colorSender
 	print "MousePressing"
 	
-	for i in range(len(nodesValue)):
-		colorSender.setColor(i,0,0,nodesValue[i])
-	
-	#colorSender.resetLights()
-	colorSender.sendOut()
+	if not noArduino:
+		for i in range(len(nodesValue)):
+			colorSender.setColor(i,0,0,nodesValue[i])
+		
+		#colorSender.resetLights()
+		colorSender.sendOut()
 
 @window.event
 def on_key_press(symbol, modifiers):
 	global colorSender
-	print symbol
-	if symbol == ord("r") or ord("R"):
-		colorSender.resetLights()
+	print symbol, ord("r")
+	if not noArduino:
+		if symbol == ord("r") or ord("R"):
+			colorSender.resetLights()
 
 	
 def drawCircle(x,y,radius, res=10):
@@ -173,6 +185,16 @@ def mapToRange(value, sourceMin, sourceMax, targetMin, targetMax):
     # TRANSPOLATE TO TARGETSPAN
     return targetMin + (valueScaled * targetSpan)
 
+def contrastSigmoid(x, strength):
+	y = 0;
+	if x <= 0.5:
+		y = (strength * x) / (strength + 0.5 - x)
+	else:
+		x2 = 1-x
+		y = (strength * x2) / (strength + 0.5 - x2)
+		y = 1-y
+	return y
+
 @window.event
 def on_show():
     
@@ -183,8 +205,10 @@ def on_show():
     #pyglet.gl.glClearColor(0,0,0, 1)
     
     load_data('ppiedras.csv')
-    colorSender = ColorSender(ledCount);
     
+    if not noArduino:
+		colorSender = ColorSender(ledCount);
+		
     window.set_size(canvasWidth,canvasHeight)
     
     print " || APP START"
@@ -195,7 +219,7 @@ def on_activate():
     pyglet.gl.glClearColor(0,0,0, 1)
     print " || WINDOW ACTIVATED"
 
-pyglet.clock.schedule_interval(update, 1.0/10.0) # assign refresh rate to function-> schedule_interval(functionToSchedule, FPS)
+pyglet.clock.schedule_interval(update, 1.0/30.0) # assign refresh rate to function-> schedule_interval(functionToSchedule, FPS)
 pyglet.app.run()
 
 

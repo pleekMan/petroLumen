@@ -51,4 +51,4 @@ class ColorSender:
 		for i in range(self.ledCount):
 			#print " || LED",str(i)+":", int(self.colors[(3*i)+0]), int(self.colors[(3*i)+1]), int(self.colors[(3*i)+2])
 			self.serialComm.write(struct.pack('>BBB',int(self.colors[(3*i)+0]),int(self.colors[(3*i)+1]),int(self.colors[(3*i)+2])))
-			self.serialComm.flush()
+		self.serialComm.flush()
