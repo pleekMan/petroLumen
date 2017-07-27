@@ -22,8 +22,9 @@ window = pyglet.window.Window(visible=True, resizable=False, vsync=True)
 
 #window.set_visible()
 
-noArduino = False
+noArduino = True
 enableDraw = True
+showWire = False
 
 ledCount = 0
 nodesX = []
@@ -134,6 +135,8 @@ def on_draw():
 	
 	if enableDraw:
 		drawDirectionArrow()
+		if showWire:
+			showConnectionPath()
 		
 	# SEND colors into ColorSender and out to Arduino
 	if not noArduino:
@@ -234,6 +237,19 @@ def drawDirectionArrow():
 	
 	glPopMatrix()
 	
+def showConnectionPath():
+	global ledCount
+	global nodesX
+	global nodesY
+	
+	glColor4f(0,1,0,1)
+	glBegin(GL_LINE_STRIP)
+	
+	for i in range(ledCount):
+		glVertex2f(nodesX[i], nodesY[i])
+	
+	glEnd()
+	
 def evaluateInput(textInput):
 	textInput = textInput.split(" ")
 	print (textInput)
@@ -245,6 +261,9 @@ def evaluateInput(textInput):
 			colorSender.resetLights()
 		elif textInput[0] == "test":
 			colorSender.testLights()
+		elif textInput[0] == "wire":
+			global showWire
+			showWire = not showWire
 			
 	elif len(textInput) == 2:
 		if textInput[0] == "draw":
@@ -252,8 +271,9 @@ def evaluateInput(textInput):
 			enableDraw = bool(int(textInput[1]))
 			#print enableDraw
 		elif textInput[0] == "show":
+			led = int(textInput[1])
 			colorSender.turnOffLights()
-			colorSender.setColor(int(textInput[1]),100,100,100)
+			colorSender.setColor(led,100,100,100)
 			colorSender.sendOut()
 			sleep(2)
 			
