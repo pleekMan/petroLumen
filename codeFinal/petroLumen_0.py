@@ -14,6 +14,8 @@ from time import sleep
 # POR ESO EL RUIDO PARECE MOVERSE EN UNA DIRECCION.
 # PARA EVITAR ESTO, USAR noise3d
 
+#RGB values = 0 -> 100
+
 window = pyglet.window.Window(visible=True, resizable=False, vsync=True)
 #window.set_size(500,500)
 
@@ -233,36 +235,50 @@ def drawDirectionArrow():
 	glPopMatrix()
 	
 def evaluateInput(textInput):
-	textInput = textInput.split(",")
+	textInput = textInput.split(" ")
 	print (textInput)
 	
 	if len(textInput) == 1:
 		if textInput[0] == "stats":
 			print "X Motion: ", timeXInc, "\nY Motion: ", timeYInc, "\nLED count: ", ledCount
+		elif textInput[0] == "reset":
+			colorSender.resetLights()
+		elif textInput[0] == "test":
+			colorSender.testLights()
 			
-	elif len(textInput) > 1:
+	elif len(textInput) == 2:
 		if textInput[0] == "draw":
 			global enableDraw
 			enableDraw = bool(int(textInput[1]))
-			print enableDraw
+			#print enableDraw
+		elif textInput[0] == "show":
+			colorSender.turnOffLights()
+			colorSender.setColor(int(textInput[1]),100,100,100)
+			colorSender.sendOut()
+			sleep(2)
+			
 
 @window.event
 def on_show():
-    
+    print " || APP START"
+
     global colorSender
     
     window.clear()
     #glClear(0)
     #pyglet.gl.glClearColor(0,0,0, 1)
+    window.set_size(canvasWidth,canvasHeight)
+
     
-    load_data('ppiedras.csv')
+    load_data('ppiedras_6.csv')
     
     if not noArduino:
 		colorSender = ColorSender(ledCount);
+		#colorSender.resetLights()
+
 		
-    window.set_size(canvasWidth,canvasHeight)
     
-    print " || APP START"
+    
 
 
 @window.event
