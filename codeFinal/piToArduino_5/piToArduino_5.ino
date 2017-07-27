@@ -17,13 +17,13 @@ SI EL PUERTO SERIE dev/ttyACM0 desaparece:
 SI USO ALGUN Serial.print(), la comm entre Raspi y Arduino se traba eventualmente
 DEbe ser algo relacionado con el buffer de Tx y Rx
 
-/*
+*/
 
 #include <PololuLedStrip.h>
 
 PololuLedStrip<12> ledStrip;
 
-#define LED_COUNT 15
+#define LED_COUNT 6
 rgb_color lights[LED_COUNT];
 
 int lightCounter = 0;

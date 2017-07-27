@@ -46,7 +46,7 @@ class ColorSender:
 	def sendOut(self):
 		#intValue = [int(splittedInput[0]),int(splittedInput[1]),int(splittedInput[2])]
 		#print intValue
-		print " || SENDING OUT.."
+		#print " || SENDING OUT.."
 		
 		for i in range(self.ledCount):
 			#print " || LED",str(i)+":", int(self.colors[(3*i)+0]), int(self.colors[(3*i)+1]), int(self.colors[(3*i)+2])

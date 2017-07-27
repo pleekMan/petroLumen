@@ -1,4 +1,6 @@
+import sys
 import pyglet
+from pyglet.window import key
 from pyglet.gl import *
 from noise import pnoise1, snoise2
 import random
@@ -18,14 +20,15 @@ window = pyglet.window.Window(visible=True, resizable=False, vsync=True)
 
 #window.set_visible()
 
-noArduino = True;
+noArduino = False
+enableDraw = True
 
 ledCount = 0
 nodesX = []
 nodesY = []
 nodesValue = []
-canvasWidth = 1000
-canvasHeight = 500
+canvasWidth = 700
+canvasHeight = 700
 textos = []
 
 timeX = random.random()
@@ -50,7 +53,7 @@ def load_data(archivo):
 	global ledCount
 	global textos
 	
-	with open("ppiedras_15.csv",'r') as f:
+	with open("ppiedras_6.csv",'r') as f:
 		reader = csv.reader(f)
 		
 		for line in reader:
@@ -67,7 +70,7 @@ def load_data(archivo):
 			nodesY.append(rockY)
 			nodesValue.append(255);
 			
-			textos.append(pyglet.text.Label(str(ledCount),x=int(rockX), y=int(rockY),font_name="Arial", font_size=12))
+			textos.append(pyglet.text.Label(str(ledCount),x=int(rockX), y=int(rockY),font_name="Arial", font_size=10))
 			
 			ledCount += 1
 			
@@ -111,13 +114,25 @@ def on_draw():
         
         vizScale = noiseValue * 50 # MAX CIRCLE SIZE
         nodesValue[i] = noiseValue * 100 # MAX COLOR VALUE TO SEND TO ARDUINO SYSTEM
-
-        # DRAW CIRCLE
-        drawCircle(nodesX[i],nodesY[i],vizScale,50)
-        textos[i].text = str(i) + " : " + str("%.2f" % noiseValue)
-        textos[i].draw();
+        
+        if enableDraw:
+			# DRAW CIRCLES
+			# SIZE VARIATION
+			glColor4f(1,1,1,1)
+			drawCircle(nodesX[i],nodesY[i],vizScale,30)
+			
+			# MAX SIZE
+			glColor4f(0.2,0,0,1)
+			drawCircle(nodesX[i],nodesY[i],50,20)
+			
+			# ROCK ID AND SIZE VALUE
+			glColor4f(1,1,1,1)
+			textos[i].text = str(i) + " : " + str("%.2f" % noiseValue)
+			textos[i].draw();
 	
-	
+	if enableDraw:
+		drawDirectionArrow()
+		
 	# SEND colors into ColorSender and out to Arduino
 	if not noArduino:
 		for i in range(len(nodesValue)):
@@ -156,15 +171,19 @@ def on_mouse_press(x,y,button,modifiers):
 @window.event
 def on_key_press(symbol, modifiers):
 	global colorSender
-	print symbol, ord("r")
-	if not noArduino:
-		if symbol == ord("r") or ord("R"):
+
+	if symbol ==  key.R:
+		#print (" || GOING TO RESET LIGHTS")
+		if not noArduino:
 			colorSender.resetLights()
+	
+	if symbol ==  key.T:
+		evaluateInput(raw_input(" |||| Parametro,Valor -->  "))
 
 	
 def drawCircle(x,y,radius, res=10):
     #res = 10
-    glColor4f(1,1,1,1);
+    #glColor4f(1,1,1,1);
     #glBegin(GL_POLYGON)
     glBegin(GL_LINES)
     for i in range(res):
@@ -194,6 +213,38 @@ def contrastSigmoid(x, strength):
 		y = (strength * x2) / (strength + 0.5 - x2)
 		y = 1-y
 	return y
+	
+def drawDirectionArrow():
+	
+	
+	glColor4f(1,0,0,1)
+	
+	glPushMatrix()
+	glTranslatef(canvasWidth * 0.5, canvasHeight * 0.5,0)
+	
+	drawCircle(0,0,5,20)
+		
+	glBegin(GL_LINE_STRIP)
+	glVertex2f(0,0)
+	glVertex2f(-(timeXInc * 1000), -(timeYInc * 1000))
+
+	glEnd()
+	
+	glPopMatrix()
+	
+def evaluateInput(textInput):
+	textInput = textInput.split(",")
+	print (textInput)
+	
+	if len(textInput) == 1:
+		if textInput[0] == "stats":
+			print "X Motion: ", timeXInc, "\nY Motion: ", timeYInc, "\nLED count: ", ledCount
+			
+	elif len(textInput) > 1:
+		if textInput[0] == "draw":
+			global enableDraw
+			enableDraw = bool(int(textInput[1]))
+			print enableDraw
 
 @window.event
 def on_show():
@@ -220,8 +271,15 @@ def on_activate():
     print " || WINDOW ACTIVATED"
 
 pyglet.clock.schedule_interval(update, 1.0/30.0) # assign refresh rate to function-> schedule_interval(functionToSchedule, FPS)
-pyglet.app.run()
 
 
+if __name__== "__main__":
+	#sys.argv[0] es el mismo nombre del archivo a ejecutar
+	if len(sys.argv) > 1:
+		canvasWidth = int(sys.argv[1])
+		canvasHeight = int(sys.argv[2])
+	print ("Canvas Width x Height:",canvasWidth,"x",canvasHeight) 
+	
+	pyglet.app.run()
 
     
