@@ -22,25 +22,30 @@ window = pyglet.window.Window(visible=True, resizable=False, vsync=True)
 
 #window.set_visible()
 
-noArduino = True
+noArduino = False
 enableDraw = True
 showWire = False
+showContrast = False
 
 ledCount = 0
 nodesX = []
 nodesY = []
 nodesValue = []
-canvasWidth = 700
-canvasHeight = 700
+canvasWidth = 670
+canvasHeight = 330
 textos = []
 
 timeX = random.random()
 timeY = random.random()
-timeXInc = (random.random() * 0.06) - 0.03
-timeYInc = (random.random() * 0.06) - 0.03
+timeXInc = (random.random() * 0.1) - 0.03
+#timeYInc = (random.random() * 0.1) - 0.03
+timeYInc = 0
 # timeFarLimit = THE INCREMENT TO THE FAR LEFT/TOP OF SCREEN.
 # NOISE VALUES FOR INTERMEDIATE NODES WILL BE INTERPOLATED FROM (time -> time + timeFarLimit)
 timeFarLimit = 1
+
+contrastStrength = 0.05 #OBSERVABLE strength VALUES: 0 -> 0.3
+contrastStrengthMax = 0.3
 
 # Serial Sender
 colorSender = None
@@ -56,13 +61,18 @@ def load_data(archivo):
 	global ledCount
 	global textos
 	
-	with open("ppiedras_6.csv",'r') as f:
+	with open(archivo,'r') as f:
 		reader = csv.reader(f)
 		
 		for line in reader:
 			if(line[0] == 'size'): # bounding Box de la instalacion real, en cm
 				artworkWidth = int(line[1])
 				artworkHeight = int(line[2])
+				
+				#canvasWidth = artworkWidth / float(artworkHeight) * 1000;
+				#canvasHeight = artworkHeight / float(artworkWidth) * 1000;
+
+				
 				print "ArtWork Size: ", artworkWidth, artworkHeight
 				print "Canvas Size: ", canvasWidth, canvasHeight
 				continue
@@ -105,6 +115,9 @@ def on_draw():
     global canvasHeight
     
     global colorSender
+    
+    global contrastStrength
+    global showContrast
 
     for i in range(len(nodesX)):
         localTimeX = mapToRange(nodesX[i],0,canvasWidth,timeX, timeX + timeFarLimit)
@@ -113,30 +126,34 @@ def on_draw():
         noiseValue = snoise2(localTimeX,localTimeY,octaves=1) # pnoise1(time,octaves)  range: -1 -> 1
         noiseValue = (noiseValue + 1) * 0.5 # range: 0 -> 1
         
-        noiseValue = contrastSigmoid(noiseValue, 0.05) #OBSERVABLE VALUES: 0 -> 0.3
+        noiseValue = contrastSigmoid(noiseValue, contrastStrength) #OBSERVABLE strength VALUES: 0 -> 0.3
         
-        vizScale = noiseValue * 50 # MAX CIRCLE SIZE
+        vizScale = noiseValue * 30 # MAX CIRCLE SIZE
         nodesValue[i] = noiseValue * 100 # MAX COLOR VALUE TO SEND TO ARDUINO SYSTEM
         
         if enableDraw:
 			# DRAW CIRCLES
 			# SIZE VARIATION
 			glColor4f(1,1,1,1)
-			drawCircle(nodesX[i],nodesY[i],vizScale,30)
+			drawCircle(nodesX[i],nodesY[i],vizScale,20)
 			
 			# MAX SIZE
 			glColor4f(0.2,0,0,1)
-			drawCircle(nodesX[i],nodesY[i],50,20)
+			drawCircle(nodesX[i],nodesY[i],30,20)
 			
 			# ROCK ID AND SIZE VALUE
 			glColor4f(1,1,1,1)
-			textos[i].text = str(i) + " : " + str("%.2f" % noiseValue)
+			textos[i].text = str(i) + "  :  " + str("%.2f" % noiseValue)
 			textos[i].draw();
 	
 	if enableDraw:
 		drawDirectionArrow()
 		if showWire:
 			showConnectionPath()
+		
+		if showContrast:
+			drawContrastCurve()
+			#showContrast = False
 		
 	# SEND colors into ColorSender and out to Arduino
 	if not noArduino:
@@ -164,15 +181,30 @@ def on_draw():
 @window.event
 def on_mouse_press(x,y,button,modifiers):
 	global colorSender
-	print "MousePressing"
+	#print "MousePressing"
 	
+	'''
 	if not noArduino:
 		for i in range(len(nodesValue)):
 			colorSender.setColor(i,0,0,nodesValue[i])
 		
 		#colorSender.resetLights()
 		colorSender.sendOut()
+	'''
 
+@window.event
+def on_mouse_drag(x,y,dx,dy,button,modifiers):
+	global showContrast
+	global contrastStrength
+	global contrastStrengthMax
+	global canvasWidth
+	
+	
+	if showContrast:
+		contrastStrength = mapToRange(x,0,canvasWidth,contrastStrengthMax,0)
+	
+	
+	
 @window.event
 def on_key_press(symbol, modifiers):
 	global colorSender
@@ -183,7 +215,7 @@ def on_key_press(symbol, modifiers):
 			colorSender.resetLights()
 	
 	if symbol ==  key.T:
-		evaluateInput(raw_input(" |||| Parametro,Valor -->  "))
+		evaluateInput(raw_input(" || Parametro,Valor -->  "))
 
 	
 def drawCircle(x,y,radius, res=10):
@@ -197,6 +229,19 @@ def drawCircle(x,y,radius, res=10):
         vY = y + (radius * math.sin(angle))
         glVertex2f(vX,vY)
     glEnd()
+
+def drawRectangle(x,y,w,h):
+	pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
+    ('v2i', (x,y,x+w,y,x+w,y+h,x,y+h))
+)
+	'''
+	glBegin(GL_QUADS)
+	glVertex2f(x,y)
+	glVertex2f(x + w,y)
+	glVertex2f(x + w,y + h)
+	glVertex2f(x,y + h)
+	glEnd()
+	'''
 
 def mapToRange(value, sourceMin, sourceMax, targetMin, targetMax):
     # SPAN OF EACH RANGE
@@ -250,13 +295,29 @@ def showConnectionPath():
 	
 	glEnd()
 	
+def drawContrastCurve():
+	global contrastStrength
+	global canvasWidth
+	
+	res = 100
+	unitSize = canvasWidth / res
+	#print res, unitSize
+	for i in range(res):
+		colorValue = contrastSigmoid(i/float(res),contrastStrength) # 0 -> 0.3 OBSERVABLE strength VALUE
+		glColor4f(colorValue,colorValue,colorValue,1)
+		drawRectangle(i * unitSize, 0, unitSize, 50)
+		#drawCircle(i * unitSize, 100, 20);
+		
+
+	
+	
 def evaluateInput(textInput):
 	textInput = textInput.split(" ")
 	print (textInput)
 	
 	if len(textInput) == 1:
 		if textInput[0] == "stats":
-			print "X Motion: ", timeXInc, "\nY Motion: ", timeYInc, "\nLED count: ", ledCount
+			print "X Motion: ", -timeXInc, "\nY Motion: ", timeYInc, "\nLED count: ", ledCount
 		elif textInput[0] == "reset":
 			colorSender.resetLights()
 		elif textInput[0] == "test":
@@ -264,6 +325,9 @@ def evaluateInput(textInput):
 		elif textInput[0] == "wire":
 			global showWire
 			showWire = not showWire
+		elif textInput[0] == "contrast":
+			global showContrast
+			showContrast = not showContrast
 			
 	elif len(textInput) == 2:
 		if textInput[0] == "draw":
@@ -290,21 +354,17 @@ def on_show():
     window.set_size(canvasWidth,canvasHeight)
 
     
-    load_data('ppiedras_6.csv')
+    load_data("piedrasDatos.csv")
+    print "LedCount: ", ledCount
     
     if not noArduino:
 		colorSender = ColorSender(ledCount);
 		#colorSender.resetLights()
 
-		
-    
-    
-
-
 @window.event
 def on_activate():
     pyglet.gl.glClearColor(0,0,0, 1)
-    print " || WINDOW ACTIVATED"
+    #print " || WINDOW ACTIVATED"
 
 pyglet.clock.schedule_interval(update, 1.0/30.0) # assign refresh rate to function-> schedule_interval(functionToSchedule, FPS)
 

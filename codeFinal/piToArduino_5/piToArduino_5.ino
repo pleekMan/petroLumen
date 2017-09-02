@@ -23,7 +23,7 @@ DEbe ser algo relacionado con el buffer de Tx y Rx
 
 PololuLedStrip<12> ledStrip;
 
-#define LED_COUNT 6
+#define LED_COUNT 14
 rgb_color lights[LED_COUNT];
 
 int lightCounter = 0;

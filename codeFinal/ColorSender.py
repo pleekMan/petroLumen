@@ -28,7 +28,7 @@ class ColorSender:
 	
 	
 	def resetLights(self):
-		print " || RESETTING LIGHTS"
+		print " || RESETTING LIGHTS: code 101"
 		self.serialComm.write(struct.pack('>B',int(101)))
 		sleep(1)
 	
@@ -36,10 +36,11 @@ class ColorSender:
 		print " || TESTING LIGHTS"
 		#serialComm.write(struct.pack('>B',int(102)))
 		for i in range(self.ledCount):
+			print "|", i 
 			self.turnOffLights()
 			self.setColor(i,100,100,100)
 			self.sendOut()
-			sleep(0.5)
+			sleep(1)
 		
 	def setColor(self, led=0, r=0,g=0,b=0):
 		if led < self.ledCount:
